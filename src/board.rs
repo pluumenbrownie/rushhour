@@ -7,6 +7,7 @@ use either::Either;
 use smallvec::SmallVec;
 
 
+/// Struct used to mark vehicle locations on the board.
 #[derive(Debug, Clone, Hash, Eq, PartialEq)]
 pub struct VehicleSegment {
     id: u8,
@@ -16,6 +17,10 @@ pub struct VehicleSegment {
 
 
 impl VehicleSegment {
+    /// Creates a new `VehicleSegment`.
+    /// 
+    /// `id` must be a `String` of one or two capital letters, equal to or less than "GZ".
+    /// The vehicle moving seems to break above "DA" however so, don't use that.
     pub fn new(id: String, direction: Direction, segments_left: u8) -> Result<VehicleSegment, ()> {
         let veh_id = VehicleSegment::string_to_veh_id(id).expect("String to id failed.");
         
@@ -26,39 +31,50 @@ impl VehicleSegment {
         })
     }
 
+    /// Stores a one or two letter alphabetical string in a single `u8`.
+    /// 
+    /// `id` must be a `String` of one or two capital letters, equal to or less than "GZ".
     fn string_to_veh_id(id: String) -> Result<u8, ()> {
         let id_as_bytes = id.as_bytes();
+        // the right side of the veh_id
         let id1;
+        // the left side of the veh_id
         let id2;
+
+        // id is a single character
         if id_as_bytes.len() == 1 {
+            // character must be ASCII capital letter
             if 65 <= id_as_bytes[0] && id_as_bytes[0] <= 90 {
                 id1 = id_as_bytes[0] - 64;
                 id2 = 0;
             } else {
-                // eprintln!("Failed at len=1.");
                 return Err(());
             }
+        // id is two characters
         } else if id_as_bytes.len() == 2 {
-            if 65 <= id_as_bytes[0] && id_as_bytes[0] <= 90 &&
-               65 <= id_as_bytes[1] && id_as_bytes[1] <= 90 {
+            // characters must be ASCII capital letters
+            if     65 <= id_as_bytes[0] && id_as_bytes[0] <= 71 
+                && 65 <= id_as_bytes[1] && id_as_bytes[1] <= 90 
+            {
                 id1 = id_as_bytes[1] - 64;
                 id2 = (id_as_bytes[0] - 64) << 5;
             } else {
-                // eprintln!("Failed at len=2.");
                 return Err(());
             }
+        // id can't be longer than two characters (or empty)
         } else {
-            // eprintln!("Failed at other len.");
             return Err(());
         }
         
-        // Ok(dbg!(dbg!(id1) + dbg!(id2)))
         Ok(id1 + id2)
     }
 
+
+    /// Decodes the `VehicleSegment.id` back into a string.
     pub fn id_string(&self) -> String {
         let letter1 = (self.id & 0b00011111) + 64;
         let mut letter2 = (self.id & 0b11100000) >> 5;
+        
         if letter2 == 0 {
             letter2 = 32;
             String::from_utf8_lossy(&[letter1, letter2]).to_string()
@@ -70,6 +86,8 @@ impl VehicleSegment {
 }
 
 
+/// Enum to indicate the direction of a vehicle. Should be made with the
+/// `Direction::from_str` method. 
 #[derive(Debug, Clone, Hash, Eq, PartialEq)]
 pub enum Direction {
     Horizontal,
@@ -78,16 +96,20 @@ pub enum Direction {
 
 
 impl Direction {
+    /// Create a `Direction` enum from a stringslice.
     fn from_str(dir_char: &str) -> Self {
-        if dir_char == "H" {
-            Self::Horizontal
-        } else {
-            Self::Vertical
+        match dir_char {
+            "H" => Self::Horizontal,
+            "V" => Self::Vertical,
+            _ => panic!("{dir_char} is an invalid direction!")
         }
     }
 }
 
 
+/// Enum used to build up the `board`. Can contain a Vehicle or be Empty.
+/// 
+/// Empty is set as the `#[default]`.
 #[derive(Default, Debug, Clone, Hash, Eq, PartialEq)]
 pub enum Tile {
     Vehicle(VehicleSegment),
@@ -98,6 +120,7 @@ use Tile::{Empty, Vehicle};
 
 
 impl Tile {
+    /// Returns `True` if tile is `Tile::Empty`
     const fn empty(&self) -> bool {
         match self {
             Self::Vehicle(_) => false,
@@ -107,7 +130,8 @@ impl Tile {
 }
 
 
-/// Get Moves by running the `possible_moves` method om your `Board`.
+/// A class representing a move on the board.
+/// Get valid Moves by running the `possible_moves` method om your `Board`.
 #[derive(Debug, Clone, Hash)]
 pub struct Move {
     pub vehicle_id: u8,
@@ -116,9 +140,11 @@ pub struct Move {
 
 
 impl Move {
+    /// Decodes the `Move.vehicle_id` back into a string.
     pub fn get_id_string(&self) -> String {
         let letter1 = (self.vehicle_id & 0b00011111) + 64;
         let mut letter2 = (self.vehicle_id & 0b1110000) >> 5;
+
         if letter2 == 0 {
             String::from_utf8_lossy(&[letter1]).to_string()
         } else {
@@ -129,6 +155,10 @@ impl Move {
 }
 
 
+/// A linked list type history of moves done on a board. 
+/// Each `LinkedHistory` contains the last move made on the board and a 
+/// counted reference to an `Option` possibly containing the previous 
+/// `LinkedHistory`.
 #[derive(Clone, Hash)]
 struct LinkedHistory {
     last_move: Move,
@@ -136,6 +166,8 @@ struct LinkedHistory {
 }
 
 
+/// A struct representing a game of Rush Hour. The struct contains a 2D
+/// `Vec`-like object representing the gameboard and an optional `LinkedHistory`.
 #[derive(Clone, Hash)]
 pub struct Board {
     pub contents: SmallVec<[SmallVec<[Tile; 12]>; 12]>,
@@ -144,11 +176,15 @@ pub struct Board {
 
 
 impl Board {
+    /// Create a new, empty `Board` of size `size x size` and a an empty history.
     pub fn new(size: u8) -> Self {
+        // create the rows
         let mut board_vecs = SmallVec::<[_; 12]>::with_capacity(size.into());
 
+        // create the columns
         for _ in 0..size {
             let mut new_col = SmallVec::<[_; 12]>::with_capacity(size.into());
+            // fill the columns with empty tiles
             for _ in 0..size {
                 new_col.push(Tile::Empty);
             }
@@ -160,19 +196,26 @@ impl Board {
             previous: Arc::new(Option::None),
         }
     }
+
+    /// Prints the current boardstate to the terminal.
     pub fn show(&self) {
+        // variable used to mark the row containing the red "X" car
         let mut x_row = false;
 
+        // print the top
         print!("┌");
         for _ in &self.contents {
             print!("───");
         }
         println!("┐");
 
+        // print the middle
         for row in &self.contents {
             print!("│");
+
             for tile in row {
                 print!(" ");
+                // check if this line contains the red "X" car
                 match tile {
                     Vehicle(vehicle) => {
                         print!("{:2}", vehicle.id_string());
@@ -181,10 +224,14 @@ impl Board {
                     Empty => print!("  "), 
                 }
             }
+
+            // print an arrow on the line with the red "X" car
             println!("{}", if x_row { x_row = false; " =>"} 
-                           else {"│"});
+                           else {"│"}
+            );
         }
 
+        // print the bottom
         print!("└");
         for _ in &self.contents {
             print!("───");
@@ -193,26 +240,40 @@ impl Board {
     }
 
 
+    /// Returns a `Result` containing `true` when the red "X" car is at its 
+    /// rightmost position, else returns a `Result` containing `false`.
+    /// 
+    /// An `Error` can be returned when the given board is invalid (eg no car named "X").
     pub fn is_won(&self) -> Result<bool, ()> {
-        let x_location = self.find_vehicle(VehicleSegment::string_to_veh_id("X".to_string())?)?;
+        let x_location = self.find_vehicle(
+            VehicleSegment::string_to_veh_id("X".to_string())?
+        )?;
+
         if self.contents.len().checked_sub(x_location.1).ok_or(())? == 2 {
             return Ok(true);
         }
+
         Ok(false)
     }
 
 
+    /// Get a reference to the `Tile` at the `location`.
     pub fn get(&self, location: &(usize, usize)) -> &Tile {
         &self.contents[location.0][location.1]
     }
 
 
+    /// Get ownership to the `Tile` at the `location`, removing it by setting
+    /// the location in the `Board` to `Tile::Empty`.
     fn take(&mut self, location: &(usize, usize)) -> Tile {
         mem::take(&mut self.contents[location.0][location.1])
     }
 
 
-    /// location1.0 == location2.0
+    /// Swap the contents of the `Tile`s at location 1 and 2, if
+    /// `location1.0 == location2.0`.
+    /// 
+    /// Location coördinates must be in bounds.
     fn swap_horizontal(&mut self, location1: &(usize, usize), location2: &(usize, usize)) {
         let row = self.contents.get_mut(location1.0)
             .expect("Row index out of bounds.");
@@ -220,23 +281,35 @@ impl Board {
     }
 
 
-    /// location1.1 == location2.1
+    /// Swap the contents of the `Tile`s at location 1 and 2, if
+    /// `location1.1 == location2.1`.
+    /// 
+    /// Location coördinates must be in bounds.
     fn swap_vertical(&mut self, location1: &(usize, usize), location2: &(usize, usize)) {
+        // find highest row number
         let (highest, lowest) = if location1.0 > location2.0 {
             (location1, location2)
         } else {
             (location2, location1)
         };
+        // tell left from right
         let (left, right) = self.contents.split_at_mut(highest.0);
+
         let row1 = left.get_mut(lowest.0)
             .expect("Lowest row index out of bounds.");
         let row2 = right.get_mut(0)
             .expect("Highest row index out of bounds.");
 
+        // using swap_with_slice on slices with a size of 1
+        // nice
         row1[lowest.1..=lowest.1].swap_with_slice(&mut row2[highest.1..=highest.1]);
     }
  
 
+    /// Fill the given `Board` from a file.
+    /// 
+    /// `Board` size must be the same as the board the file describes.
+    /// And the file must exist.
     pub fn fill(&mut self, file_path: &str) {
         let contents = fs::read_to_string(file_path)
             .expect("Reading file failed.");
@@ -250,17 +323,21 @@ impl Board {
     }
 
 
+    /// Executes the given `Move` on the board.
+    /// 
+    /// `veh_move` must be a valid move, eg one obtained by `Board.possible_moves`.
     pub fn move_vehicle(&mut self, veh_move: Move) {
         let vehicle_location = self.find_vehicle(veh_move.vehicle_id)
             .expect("Vehicle not found.");
 
         // extract usefull information from given vehicle.
         let (direction, segments, origin) = 
-            if let Vehicle(vehicle) = self.get(&vehicle_location) 
-            {
-                (vehicle.direction.clone(), 
-                 vehicle.segments_left,
-                 vehicle_location)
+            if let Vehicle(vehicle) = self.get(&vehicle_location) {
+                (
+                    vehicle.direction.clone(), 
+                    vehicle.segments_left,
+                    vehicle_location
+                )
             } else {
                 panic!("Board.find_vehicle returned an invalid tile (this shouldn't happen).")
             };
@@ -300,6 +377,7 @@ impl Board {
                 ),
             };
             
+            // perform the switch
             match direction {
                 Direction::Horizontal => self.swap_horizontal(&old_loc, &new_loc),
                 Direction::Vertical => self.swap_vertical(&old_loc, &new_loc),
@@ -318,6 +396,8 @@ impl Board {
     /// 
     /// Iterates over the board. Once an empty tile is found, search in all 
     /// four directions for a vehicle which can move to that tile.
+    /// 
+    /// Returns an error if the `Board` contains no possible moves.
     pub fn possible_moves(&self) -> Result<Vec<Move>, ()> {
         let mut moves_vec: Vec<Move> = vec![];
 
@@ -437,14 +517,8 @@ impl Board {
 
         while veh_len > 0 {
             veh_len -= 1;
-            // dbg!(veh_id, veh_dir, veh_len);
+
             self.contents[veh_row - 1][veh_col - 1] = Tile::Vehicle(VehicleSegment::new(veh_id.into(), Direction::from_str(veh_dir), veh_len).unwrap());
-            //     VehicleSegment { 
-            //         id: VehicleSegment::string_to_veh_id(veh_id), 
-            //         direction: Direction::from_str(veh_dir), 
-            //         segments_left: veh_len, 
-            //     }
-            // );
 
             if veh_dir == "H" {
                 veh_col += 1;
@@ -455,6 +529,7 @@ impl Board {
     }
 
 
+    /// Print the moves made on the board in reverse order.
     pub fn show_history(&self) {
         let turn_iterator = successors(
             self.previous.deref().as_ref(), 
@@ -467,6 +542,7 @@ impl Board {
     }
 
 
+    /// Write the moves made on the `Board` to a file.
     pub fn export(&self, file_path: &str) {
         let turn_iterator: Vec<&Move> = successors(
             self.previous.deref().as_ref(), 
@@ -485,6 +561,7 @@ impl Board {
     }
 
 
+    /// Returns a hash of the `Board` state.
     pub fn get_hash(&self) -> u64 {
         let mut s = DefaultHasher::new();
         // let mut s = Hasher::
@@ -493,6 +570,7 @@ impl Board {
     }
 
 
+    /// Return the location of the given vehicle on the board.
     fn find_vehicle(&self, id_number: u8) -> Result<(usize, usize), ()> {
         for numbered_row in self.contents.iter().enumerate() {
             let (row_num, row) = numbered_row;

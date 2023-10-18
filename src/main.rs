@@ -7,8 +7,8 @@ use solvers::Solver;
 
 
 fn main() {
-    breadth_first_solve("/home/pluumenbrownie/rust_projects/rusthour/gameboards/Rushhour9x9_6.csv");
-    // play_manually("/home/pluumenbrownie/rust_projects/rusthour/gameboards/Rushhour6x6_test.csv");
+    // breadth_first_solve("/home/pluumenbrownie/rust_projects/rusthour/gameboards/Rushhour9x9_6.csv");
+    play_manually("/home/pluumenbrownie/rust_projects/rusthour/gameboards/Rushhour6x6_test.csv");
 }
 
 pub fn breadth_first_solve(filename: &str) {
