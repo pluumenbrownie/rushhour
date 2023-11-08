@@ -1,6 +1,6 @@
 
 #[path ="board.rs"]
-mod board;
+pub mod board;
 use std::{collections::HashSet, mem};
 
 use board::Board;

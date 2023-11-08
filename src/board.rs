@@ -159,7 +159,7 @@ impl Move {
 /// Each `LinkedHistory` contains the last move made on the board and a 
 /// counted reference to an `Option` possibly containing the previous 
 /// `LinkedHistory`.
-#[derive(Clone, Hash)]
+#[derive(Clone, Hash, Debug)]
 struct LinkedHistory {
     last_move: Move,
     next_link: Arc<Option<LinkedHistory>>,
@@ -168,7 +168,7 @@ struct LinkedHistory {
 
 /// A struct representing a game of Rush Hour. The struct contains a 2D
 /// `Vec`-like object representing the gameboard and an optional `LinkedHistory`.
-#[derive(Clone, Hash)]
+#[derive(Clone, Hash, Debug)]
 pub struct Board {
     pub contents: SmallVec<[SmallVec<[Tile; 12]>; 12]>,
     previous: Arc<Option<LinkedHistory>>,
@@ -304,13 +304,14 @@ impl Board {
         // nice
         row1[lowest.1..=lowest.1].swap_with_slice(&mut row2[highest.1..=highest.1]);
     }
- 
+
 
     /// Fill the given `Board` from a file.
     /// 
     /// `Board` size must be the same as the board the file describes.
     /// And the file must exist.
     pub fn fill(&mut self, file_path: &str) {
+        // println!("{}", file_path);
         let contents = fs::read_to_string(file_path)
             .expect("Reading file failed.");
         
@@ -348,7 +349,7 @@ impl Board {
         } else {
             Either::Right((0usize..=segments.into()).rev())
         };
-        
+
         for offset in order {
             // find tile to consider.
             let old_loc = match direction {

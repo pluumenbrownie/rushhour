@@ -1,18 +1,30 @@
 
-#[path ="board.rs"]
-mod board;
+// mod board;
+#[path ="solvers.rs"]
+pub mod solvers;
 
-use board::Board;
+use std::fs;
+
+use solvers::board::Board;
 use read_input::prelude::*;
 use regex::Regex;
+
+
+pub fn list_boards() {
+    let paths = fs::read_dir("./gameboards").unwrap();
+    for path in paths {
+        println!("Name: {}", path.unwrap().path().display())
+    }
+}
 
 
 pub fn play(filename: &str) -> Result<u64, ()> {
     let re = Regex::new(r"\d+").unwrap();
     let Some(size) = re.captures(filename) else {panic!("Regex failed.")};
     let mut board = Board::new(size[0].parse::<u8>().expect("Parsing failed."));
-    let mut score = 0;
     board.fill(filename);
+
+    let mut score = 0;
 
     board.show(); 
     while !board.is_won()? {

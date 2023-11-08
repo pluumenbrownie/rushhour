@@ -1,14 +1,45 @@
 mod ui;
-mod solvers;
+// mod solvers;
 
 use std::process::exit;
-use ui::play;
-use solvers::Solver;
+use ui::{play, list_boards};
+use ui::solvers::Solver;
+
+use clap::{Args, Parser, Subcommand, ValueEnum};
+
+
+#[derive(Parser, Default, Debug)]
+struct Cli {
+    #[command(Subcommand)]
+    action: Actions,
+}
+
+
+#[derive(Debug, Subcommand)]
+enum Actions {
+    List,
+    Manual,
+    Solve,
+}
 
 
 fn main() {
-    // breadth_first_solve("/home/pluumenbrownie/rust_projects/rusthour/gameboards/Rushhour9x9_6.csv");
-    play_manually("/home/pluumenbrownie/rust_projects/rusthour/gameboards/Rushhour6x6_test.csv");
+    let cli = Cli::parse();
+    println!("{:?}", cli);
+    // todo!();
+    
+
+    // match cli {
+    //     Cli::Manual => play_manually("/home/wessel/Documents/rust_hour/rusthour/gameboards/Rushhour6x6_test.csv"),
+    //     Cli::Solve{solver} => {
+    //         match solver {
+    //             Solvers::BreadthFirst => println!("Breadth First.")
+    //         }
+    //     }
+    //     Cli::List => list_boards(),
+    // };
+    // breadth_first_solve("/home/wessel/Documents/rust_hour/rusthour/gameboards/Rushhour9x9_4.csv");
+    // play_manually("/home/wessel/Documents/rust_hour/rusthour/gameboards/Rushhour6x6_test.csv");
 }
 
 pub fn breadth_first_solve(filename: &str) {
