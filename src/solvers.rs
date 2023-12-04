@@ -1,5 +1,5 @@
 
-#[path ="board.rs"]
+// #[path ="board.rs"]
 pub mod board;
 use std::{collections::HashSet, mem};
 

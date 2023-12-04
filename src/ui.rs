@@ -3,17 +3,44 @@
 #[path ="solvers.rs"]
 pub mod solvers;
 
-use std::fs;
+use std::fs::{self, ReadDir};
 
 use solvers::board::Board;
 use read_input::prelude::*;
 use regex::Regex;
 
 
-pub fn list_boards() {
-    let paths = fs::read_dir("./gameboards").unwrap();
+pub fn list_boards() -> Result<ReadDir, std::io::Error> {
+    fs::read_dir("./gameboards")
+}
+
+
+pub fn print_boards() {
+    let paths = list_boards().unwrap();
+    // number, letter x, number, underscore, an identifier
+    let re = Regex::new(r"(?<name>\d+x\d+_[0-9a-zA-Z]+)").unwrap();
+
     for path in paths {
-        println!("Name: {}", path.unwrap().path().display())
+        // print the path
+        println!("Path: {}", path.as_ref().unwrap().path().display());
+
+        // variable to put the name in
+        let mut name = String::new();
+        // run regex and do magic
+        re.captures(
+            path.map(|dir_entry| dir_entry.file_name())
+            .unwrap()
+            .to_str()
+            .unwrap()
+        )
+            // put result in name variable
+            .map(|result| result.expand("$name", &mut name));
+
+        // set to placeholder when result was empty
+        if name == "" {
+            name = String::from("No valid name.");
+        }
+        println!("Name: {}", name);
     }
 }
 

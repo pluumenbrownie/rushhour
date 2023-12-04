@@ -2,30 +2,66 @@ mod ui;
 // mod solvers;
 
 use std::process::exit;
-use ui::{play, list_boards};
+use ui::{play, list_boards, print_boards};
 use ui::solvers::Solver;
 
 use clap::{Args, Parser, Subcommand, ValueEnum};
 
 
-#[derive(Parser, Default, Debug)]
+#[derive(Parser)]
 struct Cli {
-    #[command(Subcommand)]
-    action: Actions,
+    #[command(subcommand)]
+    command: Option<Actions>,
 }
 
 
 #[derive(Debug, Subcommand)]
 enum Actions {
+    /// Print out all found gameboards
     List,
-    Manual,
+    /// Todo!
     Solve,
+    /// Play RustHour manually
+    Manual(Manual),
+}
+
+
+#[derive(Args, Debug)]
+struct Manual {
+    /// The name of the gameboard to solve manually.
+    board_name: String,
 }
 
 
 fn main() {
     let cli = Cli::parse();
-    println!("{:?}", cli);
+
+    if let None = &cli.command {
+        panic!("No commands supplied!");
+    }
+
+    match &cli.command.unwrap() {
+        Actions::List => print_boards(),
+        Actions::Manual(input) => {
+            let board_list = match list_boards() {
+                Ok(result) => result,
+                Err(error) => {
+                    println!("{}", error);
+                    panic!("No valid dir found.");
+                }
+            };
+            
+            println!("Searching board {}", input.board_name);
+            // let re = Regex::new(r"\d+").unwrap();
+            // let Some(size) = re.captures(filename) else {panic!("Regex failed.")};
+        }
+        _ => {}
+    }
+    // match cli.command {
+    //     Actions::List => list_boards(),
+    //     _ => {}
+    // }
+    // println!("{:?}", cli);
     // todo!();
     
 
